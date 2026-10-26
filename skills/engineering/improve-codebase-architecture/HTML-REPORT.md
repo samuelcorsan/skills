@@ -36,6 +36,8 @@ The architectural review is rendered as a single self-contained HTML file in the
       .seam { fill: none; stroke: #64748b; stroke-width: 2; stroke-dasharray: 5 5; }
       .arrow { fill: none; stroke: #475569; stroke-width: 2; }
       .leak { fill: none; stroke: #dc2626; stroke-width: 2; }
+      .arrow-head { fill: #475569; }
+      .leak-head { fill: #dc2626; }
       .node-label { fill: #172033; font: 13px ui-sans-serif, system-ui, sans-serif; }
       .deep-label { fill: #fff; font: 13px ui-sans-serif, system-ui, sans-serif; }
       .details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
@@ -93,7 +95,7 @@ Pick the pattern that fits the candidate. Mix them. Don't make every diagram loo
 
 ### Static dependency graph or call flow
 
-Use inline SVG nodes, connectors, and `<text>` labels when the point is "X calls Y calls Z, and look at the mess." Lay out nodes on a fixed `viewBox` with enough room for long labels; use the `.node`, `.deep-node`, `.arrow`, `.leak`, and `.seam` styles. Use a red connector only for an actual leak across a seam. For a sequence, use vertical lifelines and numbered, labelled arrows. Every SVG label is escaped text.
+Use inline SVG nodes, connectors, and `<text>` labels when the point is "X calls Y calls Z, and look at the mess." Lay out nodes on a fixed `viewBox` with enough room for long labels; use the `.node`, `.deep-node`, `.arrow`, `.leak`, and `.seam` styles. Give every directed connector a visible arrowhead at its destination, matching the connector's normal or leak colour. Preserve the direction of opposing and branching calls rather than assuming a left-to-right flow. Use a red connector only for an actual leak across a seam. For a sequence, use vertical lifelines and numbered, labelled arrows. Every SVG label is escaped text.
 
 ```html
 <div class="diagram">
@@ -103,10 +105,12 @@ Use inline SVG nodes, connectors, and `<text>` labels when the point is "X calls
     <rect class="node" x="12" y="48" width="120" height="56" rx="8" />
     <text class="node-label" x="24" y="81">Order intake</text>
     <path class="arrow" d="M132 76 H206" />
+    <path class="arrow-head" d="M206 76 l-10 -5 v10 Z" />
     <rect class="node" x="206" y="48" width="100" height="56" rx="8" />
     <text class="node-label" x="218" y="81">Order store</text>
     <path class="seam" d="M324 24 V132" />
     <path class="leak" d="M306 76 H344" />
+    <path class="leak-head" d="M344 76 l-10 -5 v10 Z" />
     <rect class="node" x="344" y="48" width="84" height="56" rx="8" />
     <text class="node-label" x="354" y="81">Pricing</text>
   </svg>
