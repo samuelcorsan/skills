@@ -1,6 +1,6 @@
 # HTML Report Format
 
-The architectural review is rendered as a single self-contained HTML file in the OS temp directory. Tailwind and Mermaid both come from CDNs. Mermaid handles graph-shaped diagrams reliably; hand-built divs and inline SVG handle the more editorial visuals (mass diagrams, cross-sections). Mix the two: don't lean on Mermaid for everything, it'll start to look generic.
+The architectural review is rendered as a single self-contained HTML file in the OS temp directory. Put all styling in an inline `<style>` element. Use static HTML and inline SVG for diagrams, including dependency graphs and call flows. The report needs no scripts, fonts, stylesheets, images, or other assets from the network.
 
 ## Scaffold
 
@@ -9,29 +9,62 @@ The architectural review is rendered as a single self-contained HTML file in the
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Architecture review for {{repo name}}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script type="module">
-      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
-      mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });
-    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Architecture review for {{escaped repo name}}</title>
     <style>
-      /* small custom layer for things Tailwind doesn't cover cleanly:
-         dashed seam lines, hand-drawn-feeling arrow heads, etc. */
-      .seam { stroke-dasharray: 4 4; }
-      .leak { stroke: #dc2626; }
-      .deep { background: linear-gradient(135deg, #0f172a, #1e293b); }
+      :root { color-scheme: light; font-family: ui-sans-serif, system-ui, sans-serif; color: #172033; background: #f8f7f4; }
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      main { max-width: 1040px; margin: auto; padding: 48px 24px 80px; }
+      header, .card, #top-recommendation { margin-bottom: 40px; }
+      h1, h2, h3, p { margin-top: 0; }
+      h1 { font-size: 2rem; letter-spacing: -.04em; }
+      h2 { font-size: 1.4rem; letter-spacing: -.02em; }
+      h3 { font-size: .85rem; text-transform: uppercase; letter-spacing: .08em; }
+      .meta, .legend, .files { color: #475569; font-size: .9rem; }
+      .legend { display: flex; gap: 16px; flex-wrap: wrap; }
+      .card, #top-recommendation { padding: 28px; border: 1px solid #dbe1e7; border-radius: 16px; background: white; }
+      .badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+      .badge { padding: 4px 9px; border-radius: 999px; background: #e2e8f0; color: #334155; font-size: .75rem; font-weight: 700; }
+      .strong { background: #d1fae5; color: #065f46; }
+      .exploring { background: #fef3c7; color: #92400e; }
+      .diagrams { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 24px 0; }
+      .diagram { min-width: 0; padding: 16px; border: 1px solid #dbe1e7; border-radius: 12px; background: #fcfcfb; }
+      .diagram svg { display: block; width: 100%; height: auto; max-height: 320px; }
+      .node { fill: #fff; stroke: #64748b; stroke-width: 2; }
+      .deep-node { fill: #172033; stroke: #172033; stroke-width: 2; }
+      .seam { fill: none; stroke: #64748b; stroke-width: 2; stroke-dasharray: 5 5; }
+      .arrow { fill: none; stroke: #475569; stroke-width: 2; }
+      .leak { fill: none; stroke: #dc2626; stroke-width: 2; }
+      .node-label { fill: #172033; font: 13px ui-sans-serif, system-ui, sans-serif; }
+      .deep-label { fill: #fff; font: 13px ui-sans-serif, system-ui, sans-serif; }
+      .details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+      .files { font-family: ui-monospace, monospace; overflow-wrap: anywhere; }
+      .warning { padding: 12px; border-radius: 8px; background: #fffbeb; color: #92400e; }
+      a { color: #065f46; }
+      @media (max-width: 720px) { main { padding: 24px 16px; } .diagrams, .details { grid-template-columns: 1fr; } }
     </style>
   </head>
-  <body class="bg-stone-50 text-slate-900 font-sans">
-    <main class="max-w-5xl mx-auto px-6 py-12 space-y-12">
-      <header>...</header>
-      <section id="candidates" class="space-y-10">...</section>
-      <section id="top-recommendation">...</section>
+  <body>
+    <main>
+      <header>
+        <h1>Architecture review for {{escaped repo name}}</h1>
+        <p class="meta">{{escaped date}}</p>
+        <div class="legend">Solid box = module · Dashed line = seam · Red arrow = leakage · Dark box = deep module</div>
+      </header>
+      <section id="candidates" aria-label="Candidates">
+        <!-- Repeat one candidate article per opportunity, using the card structure below. -->
+      </section>
+      <section id="top-recommendation" aria-labelledby="top-heading">
+        <h2 id="top-heading">Top recommendation</h2>
+        <p><a href="#candidate-1">{{escaped candidate title}}</a>: {{escaped reason}}</p>
+      </section>
     </main>
   </body>
 </html>
 ```
+
+Replace placeholders with escaped text. For repository-derived text in HTML or SVG text nodes, encode `&` as `&amp;`, `<` as `&lt;`, and `>` as `&gt;`. Encode quotes as `&quot;` and `&#39;` when text appears in an attribute. Use fixed, locally generated IDs such as `candidate-1` for anchors rather than repository-derived URL values. Keep repository-derived content out of raw HTML, CSS, URL, SVG markup, event attributes, and external asset references. Build the diagram shapes yourself and place escaped labels in text nodes. These rules apply to repo names, paths, candidate titles, glossary terms, and ADR excerpts alike.
 
 ## Header
 
@@ -41,47 +74,54 @@ Repo name, date, and a compact legend: solid box = module, dashed line = seam, r
 
 The diagrams carry the weight. Prose is sparse, plain, and uses the glossary terms (from the `/codebase-design` skill) without ceremony.
 
-Each candidate is one `<article>`:
+Each candidate is one `<article class="card" id="candidate-1">`, with a distinct locally generated ID for each card:
 
 - **Title**: short, names the deepening (e.g. "Collapse the Order intake pipeline").
-- **Badge row**: recommendation strength (`Strong` = emerald, `Worth exploring` = amber, `Speculative` = slate), plus a tag for the dependency category (`in-process`, `local-substitutable`, `ports & adapters`, `mock`).
-- **Files**: monospaced list, `font-mono text-sm`.
-- **Before / After diagram**: the centrepiece. Two columns, side by side. See patterns below.
+- **Badge row**: recommendation strength (`Strong` = emerald, `Worth exploring` = amber, `Speculative` = slate), plus a tag for the dependency category (`in-process`, `local-substitutable`, `ports & adapters`, `mock`). Use `.badge` with `.strong` or `.exploring` when applicable.
+- **Files**: monospaced list in `.files`.
+- **Before / After diagram**: the centrepiece. Two `.diagram` columns inside `.diagrams`. See patterns below.
 - **Problem**: one sentence. What hurts.
 - **Solution**: one sentence. What changes.
 - **Wins**: bullets, ≤6 words each. e.g. "Tests hit one interface", "Pricing logic stops leaking", "Delete 4 shallow wrappers".
-- **ADR callout** (if applicable): one line in an amber-tinted box.
+- **ADR callout** (if applicable): one line in `.warning`.
 
 No paragraphs of explanation. If the diagram needs a paragraph to be understood, redraw the diagram.
 
 ## Diagram patterns
 
-Pick the pattern that fits the candidate. Mix them. Don't make every diagram look the same. Variety is part of the point.
+Pick the pattern that fits the candidate. Mix them. Don't make every diagram look the same. Variety is part of the point. Give each diagram an accessible name with its heading and, for SVG, a `<title>` with a distinct locally generated ID.
 
-### Mermaid graph (the workhorse for dependencies / call flow)
+### Static dependency graph or call flow
 
-Use a Mermaid `flowchart` or `graph` when the point is "X calls Y calls Z, and look at the mess." Wrap it in a Tailwind-styled card so it doesn't feel parachuted in. Style with classDef to colour leakage edges red and the deep module dark. Sequence diagrams work well for "before: 6 round-trips; after: 1."
+Use inline SVG nodes, connectors, and `<text>` labels when the point is "X calls Y calls Z, and look at the mess." Lay out nodes on a fixed `viewBox` with enough room for long labels; use the `.node`, `.deep-node`, `.arrow`, `.leak`, and `.seam` styles. Use a red connector only for an actual leak across a seam. For a sequence, use vertical lifelines and numbered, labelled arrows. Every SVG label is escaped text.
 
 ```html
-<div class="rounded-lg border border-slate-200 bg-white p-4">
-  <pre class="mermaid">
-    flowchart LR
-      A[OrderHandler] --> B[OrderValidator]
-      B --> C[OrderRepo]
-      C -.leak.-> D[PricingClient]
-      classDef leak stroke:#dc2626,stroke-width:2px;
-      class C,D leak
-  </pre>
+<div class="diagram">
+  <h3>Before</h3>
+  <svg viewBox="0 0 440 180" role="img" aria-labelledby="flow-title">
+    <title id="flow-title">Order intake crosses a pricing seam</title>
+    <rect class="node" x="12" y="48" width="120" height="56" rx="8" />
+    <text class="node-label" x="24" y="81">Order intake</text>
+    <path class="arrow" d="M132 76 H206" />
+    <rect class="node" x="206" y="48" width="100" height="56" rx="8" />
+    <text class="node-label" x="218" y="81">Order store</text>
+    <path class="seam" d="M324 24 V132" />
+    <path class="leak" d="M306 76 H344" />
+    <rect class="node" x="344" y="48" width="84" height="56" rx="8" />
+    <text class="node-label" x="354" y="81">Pricing</text>
+  </svg>
 </div>
 ```
 
-### Hand-built boxes-and-arrows (when Mermaid's layout fights you)
+For repo-specific labels, replace the example text using the escaping rules above. Keep shapes and label placement visible at narrow widths. Put long labels on multiple `<text>` lines or use a wider viewBox, rather than clipping them.
 
-Modules as `<div>`s with borders and labels. Arrows as inline SVG `<line>` or `<path>` elements positioned absolutely over a relative container. Reach for this when you want the "after" diagram to feel like one thick-bordered deep module with greyed-out internals, since Mermaid won't render that with the right weight.
+### Hand-built boxes and arrows
+
+Modules as bordered `<div>` elements with labels. Arrows as inline SVG `<line>` or `<path>` elements in a relative container. Reach for this when the "after" diagram should feel like one thick-bordered deep module with greyed-out internals.
 
 ### Cross-section (good for layered shallowness)
 
-Stack horizontal bands (`h-12 border-l-4`) to show layers a call passes through. Before: 6 thin layers each doing nothing. After: 1 thick band labelled with the consolidated responsibility.
+Stack horizontal bands to show modules a call passes through. Before: six thin bands each doing little. After: one thick band labelled with the consolidated responsibility.
 
 ### Mass diagram (good for "interface as wide as implementation")
 
@@ -93,11 +133,11 @@ Before: a tree of function calls rendered as nested boxes. After: the same tree 
 
 ## Style guidance
 
-- Lean editorial, not corporate-dashboard. Generous whitespace. Serif optional for headings (`font-serif` works well with stone/slate).
+- Lean editorial, not corporate-dashboard. Generous whitespace. Serif optional for headings, using a local system font.
 - Colour sparingly: one accent (emerald or indigo) plus red for leakage and amber for warnings.
 - Keep diagrams ~320px tall so before/after sits comfortably side by side without scrolling.
-- Use `text-xs uppercase tracking-wider` for module labels inside diagrams, so they read as schematic, not as UI.
-- The only scripts are the Tailwind CDN and the Mermaid ESM import. The report is otherwise static: no app code, no interactivity beyond Mermaid's own rendering.
+- Use small uppercase labels inside diagrams so they read as schematic, not as UI.
+- Keep the report static. Do not add scripts, external imports, event handlers, or network assets for styling or diagrams.
 
 ## Top recommendation section
 
