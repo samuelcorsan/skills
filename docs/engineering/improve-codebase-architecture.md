@@ -1,6 +1,6 @@
 ## What it does
 
-`improve-codebase-architecture` surveys a codebase for **deepening opportunities**. These are places where a shallow module (an interface nearly as complex as the thing it hides) could become a deep one. It writes them up as a self-contained HTML report, and then [grills](https://www.aihero.dev/ai-coding-dictionary/grilling) you through the one you pick.
+`improve-codebase-architecture` surveys a codebase for **deepening opportunities**. These are places where a shallow module (an interface nearly as complex as the thing it hides) could become a deep one. It writes them up as a self-contained HTML report with inline styling and static diagrams that opens offline without running scripts, and then [grills](https://www.aihero.dev/ai-coding-dictionary/grilling) you through the one you pick.
 
 It never changes the code. The whole run produces a conversation and one HTML file in your OS temp directory. You do the refactor later, in a separate [session](https://www.aihero.dev/ai-coding-dictionary/session), through the normal build flow. This makes it a survey, not a refactoring tool, so you can run it on a codebase you are not ready to touch yet.
 
@@ -41,7 +41,7 @@ The skill rests on one idea: **depth**. A deep module puts a lot of behaviour be
 
 For each one, it proposes the deepening that fixes it.
 
-Each candidate is a card with the files involved, the friction, a plain-English solution, the benefit in terms of **locality** and **leverage**, a before/after diagram, and a strength badge.
+Each candidate is a card with the files involved, the friction, a plain-English solution, the benefit in terms of **locality** and **leverage**, a static before/after diagram, and a strength badge.
 
 | Badge | What it means for you |
 | --- | --- |
@@ -63,7 +63,7 @@ Yes. Say so when you invoke it ("don't grill me, just show the report"). This is
 
 **The report opened as unstyled raw HTML with no diagrams. What happened?**
 
-The report loads Tailwind and Mermaid from CDNs, so it needs network access when you open it. If something blocks those scripts, the page breaks with no error. In the reported case, a security hook required SRI hashes. The agent added them, but the CDN served different bytes to the browser than to the `curl` that computed the hash, so the browser blocked the script. Offline and locked-down environments have the same problem. The agent cannot see it, because it never renders the page. As a workaround, ask for inline CSS and hand-built SVG diagrams instead of the CDN setup. This is an open issue.
+An earlier report format loaded Tailwind and Mermaid from CDNs. A reported security hook blocked those scripts after their SRI hashes did not match, leaving the report unstyled and without diagrams. The skill now directs the agent to put CSS and static HTML/SVG diagrams in the file itself, with no scripts or network assets. Repository names and diagram labels are rendered as literal text, so the report can be opened offline without running code from the repository.
 
 **It gave me twelve candidates. Do I work through them in the same session or start a new one?**
 
@@ -98,6 +98,7 @@ The skill does not ship a good answer. People often ask for a `TYPESCRIPT.md` wi
 - The candidates name your domain's concepts, not invented class names: "the Order intake module," not "the FooBarHandler."
 - The candidates are in files you edited recently, not in parts of the repo nobody touches.
 - No code changed during the run. The only new file is the HTML report in your temp directory.
+- The report keeps its styling and before/after diagrams when opened offline with scripts disabled.
 - It stops after the report and asks which candidate you want. It does not continue on its own.
 - Each card explains the payoff as locality or leverage, and says which tests get simpler, not just "this is cleaner."
 - When you reject a candidate for a lasting reason, it offers to record an ADR, so the next run does not suggest it again.
